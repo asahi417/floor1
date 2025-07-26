@@ -79,12 +79,6 @@ class SDXLTurboImg2Img:
                  height: int = MODEL_IMAGE_RESOLUTION[0],
                  width: int = MODEL_IMAGE_RESOLUTION[1],
                  deep_cache: bool = False):
-        # if torch.cuda.is_available():
-        #     torch_device = torch.device("cuda")
-        # elif torch.backends.mps.is_available():
-        #     torch_device = torch.device("mps")
-        # else:
-        #     torch_device = torch.device("cpu")
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             config = dict(
                 variant="fp16",

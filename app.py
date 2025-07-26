@@ -3,17 +3,15 @@ import logging
 import traceback
 from typing import Optional
 from time import time
-from io import BytesIO
 
-from diffusers.utils import load_image
 import torch
-from PIL import Image
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from img2img_model import SDXLTurboImg2Img
+from util import bytes2image, image2bytes
 
 
 logger = logging.getLogger(__name__)
@@ -61,20 +59,6 @@ class ItemUpdateConfig(BaseModel):
     negative_prompt: Optional[str] = None
     noise_scale_latent_image: Optional[float] = None
     noise_scale_latent_prompt: Optional[float] = None
-
-
-def bytes2image(image_hex: str) -> Image.Image:
-    image_bytes = bytes.fromhex(image_hex)
-    return Image.open(BytesIO(image_bytes))
-
-
-def image2bytes(image: str | Image.Image) -> str:
-    if isinstance(image, str):
-        image = load_image(image)
-    buffer = BytesIO()
-    image.save(buffer, format="JPEG")
-    image_bytes = buffer.getvalue()
-    return image_bytes.hex()
 
 
 @app.post("/update_config")

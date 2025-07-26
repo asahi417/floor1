@@ -1,6 +1,6 @@
 import os
 import requests
-from app import bytes2image, image2bytes
+from util import bytes2image, image2bytes
 from pprint import pprint
 
 # specify the endpoint you want to test
