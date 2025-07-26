@@ -64,7 +64,7 @@ class CachedPrompts:
             self.weight = (weight / weight.sum()).to(self.prompt_embeds.device)
         prompt_embeds = (self.weight.reshape(-1, 1, 1, 1) * self.prompt_embeds).sum(0)
         pooled_prompt_embeds = (self.weight.reshape(-1, 1, 1) * self.pooled_prompt_embeds).sum(0)
-        return prompt_embeds, pooled_prompt_embeds
+        return prompt_embeds.type(self.prompt_embeds.dtype), pooled_prompt_embeds.type(pooled_prompt_embeds.dtype)
 
 
 class SDXLTurboImg2Img:
