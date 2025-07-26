@@ -1,10 +1,8 @@
-import os
+from dataclasses import dataclass
 import logging
 import traceback
-from typing import Optional
 from time import time
 
-import torch
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -21,9 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 # model config
-width = int(os.getenv("WIDTH", 512))
-height = int(os.getenv("HEIGHT", 512))
-model = SDXLTurboImg2Img(height=height, width=width, deep_cache=True)
+model = SDXLTurboImg2Img()
 
 # launch app
 app = FastAPI()
@@ -32,50 +28,56 @@ app.add_middleware(
 )
 
 
+class ItemUpdateConfig(BaseModel):
+    pointer: int | None = None
+    prompt: list[str] | None = None
+    std: list[float] | None = None
+    noise_scale_latent_image: float | None = None
+    noise_scale_latent_prompt: float | None = None
+
+
+class ItemGenerateImage(ItemUpdateConfig):
+    id: int
+    image_hex: str
+
+
+@dataclass()
 class GenerationConfig:
-    prompt: str = "surrealistic, creative, inspiring, geometric, blooming, paint by Salvador Dali, HQ"
-    seed: int = 42
+    pointer: int = 0
+    prompt: list[str] | None = None
+    std: list[float] | None = None
     noise_scale_latent_image: float = 0.0
     noise_scale_latent_prompt: float = 0.0
 
+    def update(self, item: ItemUpdateConfig | ItemGenerateImage):
+        if item.prompt is not None:
+            self.prompt = item.prompt
+        if item.std is not None:
+            self.std = item.std
+        if item.pointer is not None:
+            self.pointer = item.pointer
+        if item.noise_scale_latent_image is not None:
+            self.noise_scale_latent_image = item.noise_scale_latent_image
+        if item.noise_scale_latent_prompt is not None:
+            self.noise_scale_latent_prompt = item.noise_scale_latent_prompt
 
-def _update_config(
-        prompt: Optional[str] = None,
-        seed: Optional[int] = None,
-        noise_scale_latent_image: Optional[float] = None,
-        noise_scale_latent_prompt: Optional[float] = None,
-):
-    GenerationConfig.prompt = prompt or GenerationConfig.prompt
-    GenerationConfig.seed = seed or GenerationConfig.seed
-    if noise_scale_latent_image is not None:
-        GenerationConfig.noise_scale_latent_image = noise_scale_latent_image
-    if noise_scale_latent_prompt is not None:
-        GenerationConfig.noise_scale_latent_prompt = noise_scale_latent_prompt
+    @property
+    def to_dict(self) -> dict:
+        return {
+            "prompt": self.prompt, "std": self.std, "pointer": self.pointer,
+            "noise_scale_latent_image": self.noise_scale_latent_image,
+            "noise_scale_latent_prompt": self.noise_scale_latent_prompt
+        }
 
 
-class ItemUpdateConfig(BaseModel):
-    prompt: Optional[str] = None
-    seed: Optional[int] = None
-    negative_prompt: Optional[str] = None
-    noise_scale_latent_image: Optional[float] = None
-    noise_scale_latent_prompt: Optional[float] = None
+generation_config = GenerationConfig()
 
 
 @app.post("/update_config")
 async def update_config(item: ItemUpdateConfig):
     try:
-        _update_config(
-            prompt=item.prompt,
-            seed=item.seed,
-            noise_scale_latent_image=item.noise_scale_latent_image,
-            noise_scale_latent_prompt=item.noise_scale_latent_prompt,
-        )
-        return JSONResponse(content={
-            "prompt": GenerationConfig.prompt,
-            "seed": GenerationConfig.seed,
-            "noise_scale_latent_image": GenerationConfig.noise_scale_latent_image,
-            "noise_scale_latent_prompt": GenerationConfig.noise_scale_latent_prompt,
-        })
+        generation_config.update(item)
+        return JSONResponse(content=generation_config.to_dict)
     except Exception:
         logging.exception('Error')
         raise HTTPException(status_code=404, detail=traceback.print_exc())
@@ -84,52 +86,29 @@ async def update_config(item: ItemUpdateConfig):
 @app.get("/get_config")
 async def get_config():
     try:
-        return JSONResponse(content={
-            "prompt": GenerationConfig.prompt,
-            "seed": GenerationConfig.seed,
-            "noise_scale_latent_image": GenerationConfig.noise_scale_latent_image,
-            "noise_scale_latent_prompt": GenerationConfig.noise_scale_latent_prompt,
-        })
+        return JSONResponse(content=generation_config.to_dict)
     except Exception:
         logging.exception('Error')
         raise HTTPException(status_code=404, detail=traceback.print_exc())
 
 
-class ItemGenerateImage(ItemUpdateConfig):
-    id: int
-    image_hex: str
-
-
 @app.post("/generate_image")
 async def generate_image(item: ItemGenerateImage):
     try:
-        _update_config(
-            prompt=item.prompt,
-            seed=item.seed,
-            noise_scale_latent_image=item.noise_scale_latent_image,
-            noise_scale_latent_prompt=item.noise_scale_latent_prompt,
-        )
-        image = bytes2image(item.image_hex)
+        generation_config.update(item)
         start = time()
-        with torch.no_grad():
-            generated_image = model(
-                image=image,
-                prompt=GenerationConfig.prompt,
-                seed=GenerationConfig.seed,
-                noise_scale_latent_image=GenerationConfig.noise_scale_latent_image,
-                noise_scale_latent_prompt=GenerationConfig.noise_scale_latent_prompt,
-            )
+        generated_image = model(
+            image=bytes2image(item.image_hex),
+            pointer=generation_config.pointer,
+            prompt=generation_config.prompt,
+            std=generation_config.std,
+            noise_scale_latent_image=generation_config.noise_scale_latent_image,
+            noise_scale_latent_prompt=generation_config.noise_scale_latent_prompt,
+        )
         elapsed = time() - start
         image_hex = image2bytes(generated_image)
-        return JSONResponse(content={
-            "id": item.id,
-            "image_hex": image_hex,
-            "time": elapsed,
-            "prompt": GenerationConfig.prompt,
-            "seed": GenerationConfig.seed,
-            "noise_scale_latent_image": GenerationConfig.noise_scale_latent_image,
-            "noise_scale_latent_prompt": GenerationConfig.noise_scale_latent_prompt,
-        })
+        return JSONResponse(content={"id": item.id, "image_hex": image_hex, "time": elapsed})
     except Exception:
         logging.exception('Error')
+        print(traceback.print_exc())
         raise HTTPException(status_code=404, detail=traceback.print_exc())
