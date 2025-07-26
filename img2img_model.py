@@ -61,7 +61,7 @@ class CachedPrompts:
             assert 0 <= pointer <= n
             denominator = (2 * torch.pi * var) ** .5
             weight = torch.exp(-(pointer - torch.arange(n)) ** 2 / (2 * var)) / denominator
-            self.weight = weight / weight.sum()
+            self.weight = (weight / weight.sum()).to(self.prompt_embeds.device)
         prompt_embeds = (self.weight.reshape(-1, 1, 1, 1) * self.prompt_embeds).sum(0)
         pooled_prompt_embeds = (self.weight.reshape(-1, 1, 1) * self.pooled_prompt_embeds).sum(0)
         return prompt_embeds, pooled_prompt_embeds
