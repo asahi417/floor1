@@ -16,4 +16,5 @@ test/*/output
 *.wav
 *.mp3
 prototype_*
+projects
 test_image*
