@@ -5,3 +5,7 @@ DeepCache
 opencv-python
 pydantic
 fastapi
+cv2
+gradio
+uvicorn
+accelerate

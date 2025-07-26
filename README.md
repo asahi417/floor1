@@ -13,6 +13,7 @@ pip install -U git+https://github.com/asahi417/floor1.git@main
 ```shell
 uvicorn app:app --host 0.0.0.0 --port 4444
 ```
+
 Access API viewer http://0.0.0.0:4444/docs.
 
 ### Frontend

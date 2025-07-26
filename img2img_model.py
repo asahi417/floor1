@@ -79,13 +79,13 @@ class SDXLTurboImg2Img:
                  height: int = MODEL_IMAGE_RESOLUTION[0],
                  width: int = MODEL_IMAGE_RESOLUTION[1],
                  deep_cache: bool = False):
-        if torch.cuda.is_available():
-            torch_device = torch.device("cuda")
-        elif torch.backends.mps.is_available():
-            torch_device = torch.device("mps")
-        else:
-            torch_device = torch.device("cpu")
-        if torch_device.type in ["cuda", "mps"]:
+        # if torch.cuda.is_available():
+        #     torch_device = torch.device("cuda")
+        # elif torch.backends.mps.is_available():
+        #     torch_device = torch.device("mps")
+        # else:
+        #     torch_device = torch.device("cpu")
+        if torch.cuda.is_available() or torch.backends.mps.is_available():
             config = dict(
                 variant="fp16",
                 torch_dtype=torch.float16,
@@ -103,7 +103,7 @@ class SDXLTurboImg2Img:
             helper = DeepCacheSDHelper(pipe=self.base_model)
             helper.set_params(cache_interval=3, cache_branch_id=0)
             helper.enable()
-        self.base_model = self.base_model.to(torch_device)
+        # self.base_model = self.base_model.to(torch_device)
         self.cached_latent_prompt = None
 
     def __call__(self,
