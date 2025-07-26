@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import traceback
 from time import time
@@ -44,8 +44,14 @@ class ItemGenerateImage(ItemUpdateConfig):
 @dataclass()
 class GenerationConfig:
     pointer: int = 0
-    prompt: list[str] | None = None
-    std: list[float] | None = None
+    prompt: list[str] = field(
+        default_factory=lambda: [
+            "A portrait, painting, Renaissance, by Michelangelo, passionate, mountains and forest in the back, HQ, 4k",
+            "Cubism, geometric, Picasso, 20th, modern art, warm color, happiness cheerful, HQ, 4k",
+            "Abstraction, distorted noisy picture, chaos, symbolism, sacred, dripping, pattern, HQ, 4k"
+        ]
+    )
+    std: list[float] = field(default_factory=lambda: [0.1, 0.1, 0.1])
     noise_scale_latent_image: float = 0.0
     noise_scale_latent_prompt: float = 0.0
 
@@ -110,5 +116,4 @@ async def generate_image(item: ItemGenerateImage):
         return JSONResponse(content={"id": item.id, "image_hex": image_hex, "time": elapsed})
     except Exception:
         logging.exception('Error')
-        print(traceback.print_exc())
         raise HTTPException(status_code=404, detail=traceback.print_exc())

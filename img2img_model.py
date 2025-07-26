@@ -8,12 +8,10 @@ from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl_img2im
 from PIL import Image
 from DeepCache import DeepCacheSDHelper
 
+import img2img_model_config
 from util import resize_image
 
 
-MODEL_NAME = "stabilityai/sdxl-turbo"
-IMAGE_HEIGHT = 512
-IMAGE_WIDTH = 512
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -83,7 +81,7 @@ class SDXLTurboImg2Img:
             )
         else:
             config = dict(use_safetensors=True)
-        self.base_model = StableDiffusionXLImg2ImgPipeline.from_pretrained(MODEL_NAME, **config)
+        self.base_model = StableDiffusionXLImg2ImgPipeline.from_pretrained(img2img_model_config.MODEL_NAME, **config)
         self.cached_prompt = None
         helper = DeepCacheSDHelper(pipe=self.base_model)
         helper.set_params(cache_interval=3, cache_branch_id=0)
@@ -126,7 +124,7 @@ class SDXLTurboImg2Img:
 
         LOGGER.info("generating latent image embedding")
         generator = get_generator(seed)
-        image = resize_image(image, height=IMAGE_HEIGHT, width=IMAGE_WIDTH)
+        image = resize_image(image, height=img2img_model_config.IMAGE_HEIGHT, width=img2img_model_config.IMAGE_WIDTH)
         image_tensor = self.base_model.image_processor.preprocess(image)
         ts, nis = retrieve_timesteps(self.base_model.scheduler, 2, self.base_model.device)
         ts, _ = self.base_model.get_timesteps(nis, 0.5, self.base_model.device)
@@ -153,8 +151,8 @@ class SDXLTurboImg2Img:
                 pooled_prompt_embeds=pooled_prompt_embeds,
                 num_inference_steps=2,
                 num_images_per_prompt=1,
-                height=IMAGE_HEIGHT,
-                width=IMAGE_WIDTH,
+                height=img2img_model_config.IMAGE_HEIGHT,
+                width=img2img_model_config.IMAGE_WIDTH,
                 generator=generator,
                 guidance_scale=0,
                 strength=0.5

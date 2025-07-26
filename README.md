@@ -9,17 +9,24 @@ pip install -U git+https://github.com/asahi417/floor1.git@main
 
 
 ## Usage
-### Backend
+### API Server
 ```shell
-uvicorn app:app --host 0.0.0.0 --port 4444
+uvicorn app_server:app --host 0.0.0.0 --port 4444
 ```
-
 Access API viewer http://0.0.0.0:4444/docs.
+
+
+### API Client
+```shell
+export ENDPOINT=http://0.0.0.0:4444
+uvicorn app_client:app --host 0.0.0.0 --port 4000
+```
+Access API viewer http://0.0.0.0:4000/docs.
 
 ### Frontend
 ```shell
 export ENDPOINT="0.0.0.0:4444"
 export P_PROMPT="creative, inspiring, geometric, blooming, surrealistic, HQ"
 export N_PROMPT="low quality, blur"
-python app_graphic.py
+python graphic_interface.py
 ```
