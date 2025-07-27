@@ -54,7 +54,8 @@ class ImageQueue:
         key = sorted(self.output_data_queue.keys())
         if len(key) == 0:
             return None
-        return self.output_data_queue.pop(key[0])
+        output = {k: self.output_data_queue.pop(k) for k in key}
+        return output[key[-1]]
 
 
 @app.post("/add_input")
@@ -84,7 +85,7 @@ image_queue = ImageQueue()
 @dataclass()
 class Endpoint:
     url: str
-    max_concurrent_job: int = 2
+    max_concurrent_job: int = 6
     n_current_job: int = 0
 
     @property
@@ -101,8 +102,9 @@ class MultipleEndpoints:
 
     def get_url(self) -> str | None:
         key = [k for k in self.endpoints.keys() if self.is_available(k)]
-        if not key:
+        if len(key) == 0:
             return None
+        key = sorted(key, key=lambda k: self.endpoints[k].n_current_job)
         return key[0]
 
     def increase_job_count(self, url: str) -> int:
@@ -122,6 +124,7 @@ multiple_endpoints = MultipleEndpoints(endpoints)
 def generate_image() -> None:
     url = multiple_endpoints.get_url()
     if not url:
+        logger.info(f"[url={url}] job skipped")
         return
     data = image_queue.pop_input()
     if not data:

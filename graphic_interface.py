@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+import time
 from dataclasses import dataclass, field
 
 import cv2
@@ -10,8 +11,8 @@ from PIL import Image
 import img2img_model_config
 from util import resize_image, bytes2image, image2bytes
 
-wait_sec = int(os.getenv("WAIT_M_SEC", 1))
-endpoint = os.getenv("ENDPOINT", "http://0.0.0.0:4000")
+refresh_rate_sec = 0.3
+endpoint = os.getenv("ENDPOINT", "http://0.0.0.0:4444")
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -23,7 +24,7 @@ logging.basicConfig(
 @dataclass()
 class ImageQueue:
 
-    max_num_image: int = 10
+    max_num_image: int = 100
     ids: list[int] = field(default_factory=lambda: [])
     images: list[Image.Image] = field(default_factory=lambda: [])
 
@@ -56,6 +57,8 @@ def main():
     # start main loop
     frame_index = 0
     flag, frame = vc.read()
+
+    start = time.time()
     while flag:
         flag, image = vc.read()
         frame_index += 1
@@ -64,13 +67,16 @@ def main():
         cv2.imshow("raw", np.array(image))
         image_queue.add_input_image(frame_index, image)
         image_hex = image2bytes(image)
-        with requests.post(f"{endpoint}/add_input", json={"id": frame_index, "image_hex": image_hex}) as r:
-            assert r.status_code == 200, r.status_code
-            response = r.json()
-            logger.info(f"[image_id={frame_index}] input_queue: {response['input_queue']}")
+        elapsed = time.time() - start
+        if elapsed >= refresh_rate_sec:
+            start = time.time()
+            with requests.post(f"{endpoint}/add_input", json={"id": frame_index, "image_hex": image_hex}) as r:
+                assert r.status_code == 200, r.status_code
+                response = r.json()
+                logger.info(f"[image_id={frame_index}] input_queue: {response['input_queue']}")
 
-        with requests.put(f"{endpoint}/process_input") as r:
-            assert r.status_code == 200, r.status_code
+            with requests.put(f"{endpoint}/process_input") as r:
+                assert r.status_code == 200, r.status_code
 
         with requests.get(f"{endpoint}/pop_output") as r:
             assert r.status_code == 200, r.status_code
@@ -81,8 +87,7 @@ def main():
                     image_output = bytes2image(response["image_hex"])
                     cv2.imshow("output", np.array(image_output))
                     cv2.imshow("source", np.array(image_source))
-
-        wait_key = cv2.waitKey(wait_sec)  # mil-sec
+        wait_key = cv2.waitKey(10)  # mil-sec
         if wait_key == 27:  # exit on ESC
             break
 
