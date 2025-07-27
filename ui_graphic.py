@@ -11,7 +11,7 @@ from PIL import Image
 import img2img_model_config
 from util import resize_image, bytes2image, image2bytes
 
-refresh_rate_sec = 0.3
+refresh_rate_sec = 0.15  # 3 x RTX 2000 Ada
 endpoint = os.getenv("ENDPOINT", "http://0.0.0.0:4444")
 logger = logging.getLogger(__name__)
 logging.basicConfig(

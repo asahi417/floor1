@@ -28,5 +28,5 @@ Access API viewer http://0.0.0.0:4000/docs.
 export ENDPOINT="0.0.0.0:4444"
 export P_PROMPT="creative, inspiring, geometric, blooming, surrealistic, HQ"
 export N_PROMPT="low quality, blur"
-python graphic_interface.py
+python ui_graphic.py
 ```

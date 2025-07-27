@@ -65,6 +65,37 @@ class CachedPrompts:
         return prompt_embeds.type(self.prompt_embeds.dtype), pooled_prompt_embeds.type(pooled_prompt_embeds.dtype)
 
 
+@dataclass()
+class CachedLatents:
+
+    images: list | None = None
+    latents: torch.Tensor | None = None
+    num_cache: int = 10
+    min_similarity: float = 1e-7
+
+    def fetch_image(self, latents: torch.Tensor):
+        if self.latents is None:
+            return None
+        dist = torch.norm(self.latents - latents, dim=1, p=None)
+        knn = dist.topk(1, largest=False)
+        LOGGER.info(f"[cached_latents] latents: {len(self.latents)}, dist: {knn.values[0]}")
+        if knn.values[0] <= self.min_similarity:
+            return self.images[knn.indices[0]]
+        return None
+
+    def add_latents(self, latents: torch.Tensor, image: Image.Image) -> None:
+        if self.latents is None:
+            self.latents = latents
+            self.images = [image]
+        else:
+            self.latents = torch.concat([self.latents[-self.num_cache:], latents])
+            self.images = [*image[-self.num_cache:], image]
+        assert len(self.latents) == len(self.images)
+
+
+cached_latents = CachedLatents()
+
+
 class SDXLTurboImg2Img:
 
     base_model: StableDiffusionXLImg2ImgPipeline
@@ -141,10 +172,14 @@ class SDXLTurboImg2Img:
             )
         if noise_scale_latent_image:
             latents = add_noise(latents, noise_scale_latent_image, seed)
+        cached_image = cached_latents.fetch_image(latents)
+        if cached_image is not None:
+            LOGGER.info("skip generation by cached image")
+            return cached_image
 
         LOGGER.info("generating image")
         with torch.no_grad():
-            return self.base_model(
+            output_image = self.base_model(
                 image=image_tensor,
                 latents=latents,
                 prompt_embeds=prompt_embeds,
@@ -157,6 +192,8 @@ class SDXLTurboImg2Img:
                 guidance_scale=0,
                 strength=0.5
             ).images[0]
+        cached_latents.add_latents(latents, output_image)
+        return output_image
 
     @staticmethod
     def export(data: Image.Image, output_path: str, file_format: str = "png") -> None:

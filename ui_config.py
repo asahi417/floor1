@@ -4,9 +4,7 @@ from typing import Dict, Union
 
 import gradio as gr
 
-endpoint = os.getenv("ENDPOINT", None)
-if endpoint is None:
-    raise ValueError("Endpoint not set.")
+endpoint = os.getenv("ENDPOINT", "http://0.0.0.0:4444")
 endpoint = endpoint.split(",")
 
 
@@ -57,12 +55,14 @@ def update_config(
 with gr.Blocks() as demo:
     with gr.Column():
         gr.Markdown("# Tuning Img2Img Generation")
-        component_prompt = gr.Text(
-            label="Prompt",
-            max_lines=2,
-            placeholder="Enter your prompt.",
-            value=default_config["prompt"]
-        )
+        prompt = default_config["prompt"]
+        component_prompt = [
+            gr.Text(label="Prompt 1", max_lines=1, placeholder="Prompt 1", value=prompt[0]),
+            gr.Text(label="Prompt 2", max_lines=1, placeholder="Prompt 2", value=prompt[1]),
+            gr.Text(label="Prompt 3", max_lines=1, placeholder="Prompt 3", value=prompt[2])
+        ]
+
+
         component_noise_scale_latent_image = gr.Slider(
             label="Noise Scale (Image)",
             minimum=0.0,
