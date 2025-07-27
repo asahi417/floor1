@@ -89,7 +89,7 @@ class CachedLatents:
             self.images = [image]
         else:
             self.latents = torch.concat([self.latents[-self.num_cache:], latents.flatten().unsqueeze(0)])
-            self.images = [*image[-self.num_cache:], image]
+            self.images = [*self.images[-self.num_cache:], image]
         assert len(self.latents) == len(self.images)
 
 
