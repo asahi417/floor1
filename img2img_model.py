@@ -76,7 +76,7 @@ class CachedLatents:
     def fetch_image(self, latents: torch.Tensor):
         if self.latents is None:
             return None
-        dist = torch.norm(self.latents - latents, dim=1, p=None)
+        dist = torch.norm(self.latents - latents.flatten().unsqueeze(0), dim=1, p=None)
         knn = dist.topk(1, largest=False)
         LOGGER.info(f"[cached_latents] latents: {len(self.latents)}, dist: {knn.values[0]}")
         if knn.values[0] <= self.min_similarity:
@@ -85,10 +85,10 @@ class CachedLatents:
 
     def add_latents(self, latents: torch.Tensor, image: Image.Image) -> None:
         if self.latents is None:
-            self.latents = latents
+            self.latents = latents.flatten().unsqueeze(0)
             self.images = [image]
         else:
-            self.latents = torch.concat([self.latents[-self.num_cache:], latents])
+            self.latents = torch.concat([self.latents[-self.num_cache:], latents.flatten().unsqueeze(0)])
             self.images = [*image[-self.num_cache:], image]
         assert len(self.latents) == len(self.images)
 
