@@ -70,8 +70,8 @@ class CachedLatents:
 
     images: list | None = None
     latents: torch.Tensor | None = None
-    num_cache: int = 10
-    min_similarity: float = 1e-7
+    num_cache: int = img2img_model_config.NUM_CACHED_LATENTS
+    min_similarity: float = img2img_model_config.CACHED_LATENTS_MIN_SIMILARITY
 
     def fetch_image(self, latents: torch.Tensor):
         if self.latents is None:
